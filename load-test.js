@@ -1,55 +1,62 @@
-const https = require('https');
 const http = require('http');
 
 const makeWebhookUrl = process.env.MAKE_WEBHOOK_URL;
 const makeApiKey = process.env.MAKE_API_KEY; 
 const concurrentRequests = 350;
 
-// Bypasses Node's default connection pool limits to guarantee a thundering herd
-const agent = new https.Agent({ maxSockets: Infinity });
-
 async function blastWebhook() {
     console.log(`[ALERT] Webinar Triggered! Blasting ${concurrentRequests} concurrent requests...`);
     
-    const urlObj = new URL(makeWebhookUrl);
-    const options = {
-        hostname: urlObj.hostname,
-        path: urlObj.pathname + urlObj.search,
-        method: 'POST',
-        agent: agent,
-        headers: { 
-            'Content-Type': 'application/json',
-            'x-make-apikey': makeApiKey 
-        }
+    // Object to collate our results
+    const summary = {
+        totalSent: concurrentRequests,
+        success_200: 0,
+        rateLimited_429: 0,
+        otherErrors: 0
     };
 
+    // Create the array of fetch promises
     const requests = Array.from({ length: concurrentRequests }).map((_, index) => {
-        return new Promise((resolve) => {
-            const req = https.request(options, (res) => {
-                console.log(`Request ${index}: Status ${res.statusCode}`);
-                resolve();
-            });
-
-            req.on('error', (err) => {
-                console.error(`Request ${index} failed:`, err.message);
-                resolve();
-            });
-
-            // Send the payload
-            req.write(JSON.stringify({ eventId: index, timestamp: new Date() }));
-            req.end();
+        return fetch(makeWebhookUrl, {
+            method: 'POST',
+            headers: { 
+                'Content-Type': 'application/json',
+                'x-make-apikey': makeApiKey || '' 
+            },
+            body: JSON.stringify({ eventId: index, timestamp: new Date() })
+        })
+        .then(res => {
+            if (res.status === 200) {
+                summary.success_200++;
+            } else if (res.status === 429) {
+                summary.rateLimited_429++;
+            } else {
+                summary.otherErrors++;
+            }
+        })
+        .catch(err => {
+            summary.otherErrors++;
         });
     });
 
+    // Wait for all 350 requests to completely finish
     await Promise.all(requests);
-    console.log("Load test complete.");
+    console.log("Load test complete. Results:", summary);
+    
+    return summary;
 }
 
 const server = http.createServer(async (req, res) => {
     if (req.url === '/trigger-blast') {
-        blastWebhook();
+        // Await the blast so we get the completed metrics back
+        const metrics = await blastWebhook();
+        
+        // Return the clean summary directly to the client (Make)
         res.writeHead(200, { 'Content-Type': 'application/json' });
-        res.end(JSON.stringify({ message: "Load test initiated successfully!" }));
+        res.end(JSON.stringify({ 
+            status: "complete", 
+            results: metrics 
+        }));
     } else {
         res.writeHead(404, { 'Content-Type': 'application/json' });
         res.end(JSON.stringify({ error: "Not Found" }));
