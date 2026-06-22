@@ -1,12 +1,26 @@
 {
-  "name": "webhook-load-test",
+  "name": "makemasters-june26-rate-limiter",
   "version": "1.0.0",
-  "description": "Load testing script",
-  "main": "load-test.js",
+  "description": "",
+  "main": "server.js",
   "scripts": {
-    "start": "node load-test.js"
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "start": "node server.js"
   },
-  "engines": {
-    "node": ">=18.0.0"
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/makeskinner/makeMasters-june26-load-test.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "commonjs",
+  "bugs": {
+    "url": "https://github.com/makeskinner/makeMasters-june26-load-test/issues"
+  },
+  "homepage": "https://github.com/makeskinner/makeMasters-june26-load-test#readme",
+  "dependencies": {
+    "express": "^5.2.1",
+    "express-rate-limit": "^8.5.2"
   }
 }
