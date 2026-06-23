@@ -9,7 +9,8 @@ let requestCount = 0;
 
 // Strict Rate Limiter: Max 5 requests per minute globally
 const limiter = rateLimit({
-  windowMs: 60 * 1000, // 1 minute
+  // windowMs: 60 * 1000, // 1 minute
+  windowMs: 30 * 1000, // 30 seconds
   max: 5, 
   message: { error: 'rateLimited_429', message: 'Too many requests, please slow down.' },
   standardHeaders: true, 
