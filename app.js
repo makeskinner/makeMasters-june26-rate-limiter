@@ -4,13 +4,16 @@ const rateLimit = require('express-rate-limit');
 const app = express();
 const PORT = process.env.PORT || 3000;
 
-// Strict Rate Limiter: Max 5 requests per minute
+// Strict Rate Limiter: Max 5 requests per minute globally
 const limiter = rateLimit({
   windowMs: 60 * 1000, // 1 minute
   max: 5, 
   message: { error: 'rateLimited_429', message: 'Too many requests, please slow down.' },
-  standardHeaders: true, // Return rate limit info in the `RateLimit-*` headers
-  legacyHeaders: false, 
+  standardHeaders: true, 
+  legacyHeaders: false,
+  
+  // This forces the limiter to ignore IP addresses and enforce the limit globally
+  keyGenerator: (req, res) => 'webinar_global_limit' 
 });
 
 app.set('trust proxy', 1);
